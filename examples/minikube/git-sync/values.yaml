@@ -1,0 +1,33 @@
+airflow:
+  # Don't use this fernet key in production!
+  fernet_key: "j0PNE8131Vx-ix7BsNDwskFUlnLa00mWU17BRujVcdY="
+  image:
+    repository: airflow
+    tag: latest
+    pull_policy: IfNotPresent
+  config:
+  dags:
+    persistence:
+      enabled: false  # Persistence must be disabled when using git-sync
+    git:
+      # Play around with different repositories, branches and subpaths
+      # subpath is the relative directory path in the git repository where
+      # the dags can be found.
+      url: https://github.com/apache/airflow
+      branch: master
+      subpath: airflow/example_dags
+  rbac:
+    enabled: false
+
+
+ingress:
+  enabled: false
+
+postgresql:
+  enabled: true
+  postgresUser: postgres
+  postgresPassword: airflow
+  postgresDatabase: airflow
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce

@@ -1,0 +1,35 @@
+airflow:
+  # Don't use this fernet key in production!
+  fernet_key: "j0PNE8131Vx-ix7BsNDwskFUlnLa00mWU17BRujVcdY="
+  service:
+    type: NodePort
+  image:
+    repository: airflow
+    tag: latest
+    pull_policy: IfNotPresent
+  config:
+  dags:
+    persistence:
+      enabled: true
+      size: 1Gi
+      # Pull airflow from git and copy the dags to the dags folder
+      init_dags: |
+        set -x
+        git clone https://github.com/apache/airflow.git
+        cp -r airflow/airflow/example_dags/* /usr/local/airflow/dags/
+  rbac:
+    enabled: false
+
+
+
+ingress:
+  enabled: false
+
+postgresql:
+  enabled: true
+  postgresUser: postgres
+  postgresPassword: airflow
+  postgresDatabase: airflow
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce

@@ -1,0 +1,36 @@
+airflow:
+  # Don't use this fernet key in production!
+  fernet_key: "j0PNE8131Vx-ix7BsNDwskFUlnLa00mWU17BRujVcdY="
+  image:
+    repository: <YOUR/IMAGE/URL>
+    tag: <TAG>
+    pull_policy: IfNotPresent
+  config:
+  logs:
+    persistence:
+      existingClaim: nfs-airflow-logs
+  dags:
+    path: /usr/local/airflow/dags
+    donot_pickle: false
+    persistence:
+      enabled: true
+      existingClaim: nfs-airflow-dags
+      init_dags: |
+        set -x
+        git clone https://github.com/apache/airflow.git
+        cp -r airflow/airflow/example_dags/* /usr/local/airflow/dags/
+  rbac:
+    enabled: false
+
+
+ingress:
+  enabled: false
+
+postgresql:
+  enabled: true
+  postgresUser: postgres
+  postgresPassword: airflow
+  postgresDatabase: airflow
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
