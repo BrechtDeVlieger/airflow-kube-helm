@@ -1,0 +1,4 @@
+.idea/
+*crunch*
+*_complete.yaml
+airflow/charts
