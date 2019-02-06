@@ -1,0 +1,50 @@
+{{- if and .Values.airflow.dags.persistence.enabled (not .Values.airflow.dags.persistence.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ template "airflow.fullname" . }}-dags
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+    - {{ .Values.airflow.dags.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.airflow.dags.persistence.size | quote }}
+{{- if .Values.airflow.dags.persistence.storageClass }}
+{{- if (eq "-" .Values.airflow.dags.persistence.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.airflow.dags.persistence.storageClass }}"
+{{- end }}
+{{- end }}
+{{- end }}
+---
+{{- if (not .Values.airflow.logs.persistence.existingClaim) }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ template "airflow.fullname" . }}-logs
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+    - {{ .Values.airflow.logs.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.airflow.logs.persistence.size | quote }}
+  {{- if .Values.airflow.logs.persistence.storageClass }}
+  {{- if (eq "-" .Values.airflow.logs.persistence.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: "{{ .Values.airflow.logs.persistence.storageClass }}"
+  {{- end }}
+  {{- end }}
+  {{- end }}
+

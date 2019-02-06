@@ -1,0 +1,202 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "airflow.fullname" . }}-web
+  labels:
+    app: {{ template "airflow.name" . }}-web
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  strategy:
+    # Smooth rolling update of the Web UI
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: {{ template "airflow.name" . }}-web
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        configmap.fabric8.io/update-on-change: "{{ template "airflow.fullname" . }}-env"
+      labels:
+        app: {{ template "airflow.name" . }}-web
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 1000
+      restartPolicy: Always
+      initContainers:
+      - name: "init-airflow"
+        image: {{ .Values.airflow.image.repository }}:{{ .Values.airflow.image.tag }}
+        imagePullPolicy: {{ .Values.airflow.image.pull_policy }}
+        volumeMounts:
+          - name: airflow-config
+            mountPath: /usr/local/airflow/airflow.cfg
+            subPath: airflow.cfg
+          - name: init-airflow
+            mountPath: /usr/local/init-airflow.sh
+            subPath: init-airflow.sh
+        envFrom:
+          - secretRef:
+              name: {{ template "airflow.fullname" . }}-env
+        command:
+          - "bash"
+        args:
+          - "-cx"
+          - "bash /usr/local/init-airflow.sh"
+      {{- if .Values.airflow.dags.persistence.enabled }}
+      - name: "init-dags"
+        image: {{ .Values.airflow.image.repository }}:{{ .Values.airflow.image.tag }}
+        imagePullPolicy: {{ .Values.airflow.image.pull_policy }}
+        volumeMounts:
+          - name: airflow-dags
+            mountPath: /usr/local/airflow/dags
+          - name: airflow-config
+            mountPath: /usr/local/airflow/airflow.cfg
+            subPath: airflow.cfg
+          - name: init-dags
+            mountPath: /usr/local/init-dags.sh
+            subPath: init-dags.sh
+        envFrom:
+          - secretRef:
+              name: {{ template "airflow.fullname" . }}-env
+        command:
+          - "bash"
+        args:
+          - "-cx"
+          - "bash /usr/local/init-dags.sh"
+      {{- end }}
+      containers:
+      {{- if not .Values.airflow.dags.persistence.enabled }}
+      - name: git-sync
+        image: k8s.gcr.io/git-sync:v3.0.1
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: airflow-dags
+            mountPath: /git
+        env:
+          - name: GIT_SYNC_REPO
+            value: {{ .Values.airflow.dags.git.url }}
+          - name: GIT_SYNC_BRANCH
+            value: {{ .Values.airflow.dags.git.branch }}
+          - name: GIT_SYNC_ROOT
+            value: /git
+          - name: GIT_SYNC_DEST
+            value: repo
+          - name: GIT_SYNC_WAIT
+            value: "{{ .Values.airflow.dags.git.wait }}"
+          - name: GIT_SYNC_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: git
+                key: GIT_SYNC_USERNAME
+          - name: GIT_SYNC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: git
+                key: GIT_SYNC_PASSWORD
+      {{- end }}
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: nginx
+            containerPort: 80
+        volumeMounts:
+          - name: nginx
+            mountPath: /etc/nginx/conf.d/default.conf
+            subPath: nginx.conf
+        readinessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 5
+          httpGet:
+            path: /health
+            port: 80
+        livenessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 80
+      - name: webserver
+        image: {{ .Values.airflow.image.repository }}:{{ .Values.airflow.image.tag }}
+        imagePullPolicy: {{ .Values.airflow.image.pull_policy }}
+        ports:
+        - name: webserver
+          containerPort: 8080
+        args: ["webserver"]
+        envFrom:
+          - secretRef:
+              name: {{ template "airflow.fullname" . }}-env
+        env:
+        - name: AIRFLOW_KUBE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # - name: FORWARDED_ALLOW_IPS
+        #   value: "*"
+        volumeMounts:
+        - name: airflow-config
+          mountPath: /usr/local/airflow/airflow.cfg
+          subPath: airflow.cfg
+        - name: webserver-config
+          mountPath: /usr/local/airflow/webserver_config.py
+          subPath: webserver_config.py
+        - name: airflow-logs
+          mountPath: /usr/local/airflow/logs
+        - name: airflow-dags
+          mountPath: /usr/local/airflow/dags
+        readinessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 5
+          httpGet:
+            path: /health
+            port: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 8080
+      volumes:
+      - name: airflow-logs
+        persistentVolumeClaim:
+          claimName: {{ if .Values.airflow.logs.persistence.existingClaim }}{{ .Values.airflow.logs.persistence.existingClaim }}{{- else }}{{ template "airflow.fullname" . }}-logs{{- end }}
+      - name: airflow-config
+        configMap:
+          name: {{ template "airflow.fullname" . }}-config
+      - name: webserver-config
+        secret:
+          secretName: webserver-config
+      - name: init-airflow
+        configMap:
+          name: {{ template "airflow.fullname" . }}-init
+      - name: nginx
+        configMap:
+          name: {{ template "airflow.fullname" . }}-nginx
+      {{- if .Values.airflow.dags.persistence.enabled }}
+      - name: init-dags
+        configMap:
+          name: {{ template "airflow.fullname" . }}-init-dags
+      {{- end }}
+      - name: airflow-dags
+        {{- if .Values.airflow.dags.persistence.enabled }}
+        persistentVolumeClaim:
+          {{- if .Values.airflow.dags.persistence.existingClaim }}
+          claimName: "{{ .Values.airflow.dags.persistence.existingClaim }}"
+          {{- else }}
+          claimName: {{ template "airflow.fullname" . }}-dags
+          {{- end }}
+        {{- else }}
+        emptyDir: {}
+        {{- end }}

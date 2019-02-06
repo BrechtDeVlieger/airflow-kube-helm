@@ -1,0 +1,177 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "airflow.fullname" . }}-init
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  init-airflow.sh: |
+    set -e
+    AIRFLOW_PATH=`pip3 show apache-airflow | grep 'Location: ' | cut -d' ' -f2 || true`
+      if [ -z $AIRFLOW_PY3 ]; then
+         AIRFLOW_PATH=`pip show apache-airflow | grep 'Location: ' | cut -d' ' -f2`
+      fi
+      AIRFLOW_VERSION=`pip freeze | grep apache-airflow | cut -d'=' -f3`
+    cd $AIRFLOW_PATH/airflow
+    airflow upgradedb
+    alembic upgrade heads
+
+    if [[ "$AIRFLOW_VERSION" > "2" ]]; then
+    CREATE_USER="users --create"
+    else
+    CREATE_USER="create_user"
+    fi
+
+    {{- if .Values.airflow.rbac.enabled }}
+    {{- range .Values.airflow.rbac.users }}
+    airflow $CREATE_USER
+    {{- if .firstname }} --firstname {{ .firstname | quote }}{{ end -}}
+    {{- if .lastname }} --lastname {{ .lastname | quote }}{{ end -}}
+    {{- if .email }} --email {{ .email | quote }}{{ end -}}
+    {{- if .username }} --username {{ .username | quote }}{{ end -}}
+    {{- if .role }} --role {{ .role | quote }}{{ end -}}
+    {{- if .password }}
+    {{- if eq .password "random" }} --use_random_password
+    {{- else }} --password {{ .password | quote }}{{ end }}
+    {{- end }} || true
+    {{- end }}
+    {{- end }}
+---
+{{- if .Values.airflow.dags.persistence.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "airflow.fullname" . }}-init-dags
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  init-dags.sh: |
+{{ tpl (required "A valid .Values.airflow.init_dags entry required!" .Values.airflow.dags.persistence.init_dags) . | indent 4 }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "airflow.fullname" . }}-nginx
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name _;
+      # if ($http_x_forwarded_proto = "http") {
+      #     return 301 https://$host$request_uri;
+      # }
+      location / {
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+      }
+      location /health {
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "airflow.fullname" . }}-config
+  labels:
+    app: {{ template "airflow.name" . }}
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  airflow.cfg: |
+    [core]
+    airflow_home = /usr/local/airflow
+    {{- if .Values.airflow.dags.persistence.enabled }}
+    dags_folder = /usr/local/airflow/dags
+    {{- else }}
+    dags_folder = /usr/local/airflow/dags/repo/{{ .Values.airflow.dags.git.subpath }}
+    {{- end }}
+    base_log_folder = /usr/local/airflow/logs
+    executor = KubernetesExecutor
+    plugins_folder = /usr/local/airflow/plugins
+    sql_alchemy_conn = $sql_alchemy_conn
+
+    [scheduler]
+    child_process_log_directory = /usr/local/airflow/logs/scheduler
+
+    [webserver]
+    rbac = {{ .Values.airflow.rbac.enabled }}
+
+    [kubernetes]
+    airflow_configmap = {{ template "airflow.fullname" . }}-config
+    worker_container_repository = {{ .Values.airflow.image.repository }}
+    worker_container_tag = {{ .Values.airflow.image.tag }}
+    worker_container_image_pull_policy = {{ .Values.airflow.image.pull_policy }}
+    worker_dags_folder = /usr/local/airflow/dags
+    delete_worker_pods = true
+    {{- if .Values.airflow.dags.persistence.enabled }}
+    {{- if .Values.airflow.dags.persistence.existingClaim }}
+    dags_volume_claim = {{ .Values.airflow.dags.persistence.existingClaim }}
+    dags_volume_subpath = {{ .Values.airflow.dags.persistence.existingClaimSubPath }}
+    {{- else }}
+    dags_volume_claim = {{ template "airflow.fullname" . }}-dags
+    dags_volume_subpath =
+    {{- end }}
+    {{- else }}
+    git_repo = {{ .Values.airflow.dags.git.url }}
+    git_branch = {{ .Values.airflow.dags.git.branch }}
+    git_subpath = {{ .Values.airflow.dags.git.subpath }}
+    git_dags_folder_mount_point = /usr/local/airflow/dags
+    {{- end }}
+    {{- if .Values.airflow.logs.persistence.existingClaim }}
+    logs_volume_claim = {{ .Values.airflow.logs.persistence.existingClaim }}
+    logs_volume_subpath = {{ .Values.airflow.logs.persistence.existingClaimSubPath }}
+    {{- else }}
+    logs_volume_claim = {{ template "airflow.fullname" . }}-logs
+    logs_volume_subpath =
+    {{- end }}
+
+    in_cluster = true
+    namespace = {{ .Release.Namespace }}
+
+    # for cloning dags from git repositories into volumes: https://github.com/kubernetes/git-sync
+    git_sync_container_repository = k8s.gcr.io/git-sync
+    git_sync_container_tag = v3.0.1
+    git_sync_init_container_name = git-sync-clone
+
+    [kubernetes_node_selectors]
+    # the key-value pairs to be given to worker pods.
+    # the worker pods will be scheduled to the nodes of the specified key-value pairs.
+    # should be supplied in the format: key = value
+
+    [kubernetes_secrets]
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN = {{ template "airflow.fullname" $ }}-env=AIRFLOW__CORE__SQL_ALCHEMY_CONN
+    AIRFLOW_HOME = {{ template "airflow.fullname" $ }}-env=AIRFLOW_HOME
+    {{- range $setting, $option := .Values.airflow.config }}
+    {{ $setting }} = {{ template "airflow.fullname" $ }}-env={{ $setting }}
+    {{- end }}
+
+    [cli]
+    api_client = airflow.api.client.json_client
+    endpoint_url = https://airflow.crunchanalytics.cloud
+
+    [api]
+    auth_backend = airflow.api.auth.backend.default
+
+    [admin]
+    # ui to hide sensitive variable fields when set to true
+    hide_sensitive_variable_fields = true

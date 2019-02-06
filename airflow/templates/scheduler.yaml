@@ -1,0 +1,96 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "airflow.fullname" . }}-scheduler
+  labels:
+    app: {{ template "airflow.name" . }}-scheduler
+    chart: {{ template "airflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  serviceAccountName: {{ template "airflow.fullname" . }}-cluster-access
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 100%
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}
+        configmap.fabric8.io/update-on-change: "{{ template "airflow.fullname" . }}-env"
+      labels:
+        app: {{ template "airflow.name" . }}-scheduler
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 1000
+      restartPolicy: Always
+      containers:
+      {{- if not .Values.airflow.dags.persistence.enabled }}
+      - name: git-sync
+        image: k8s.gcr.io/git-sync:v3.0.1
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - name: airflow-dags
+            mountPath: /git
+        env:
+          - name: GIT_SYNC_REPO
+            value: {{ .Values.airflow.dags.git.url }}
+          - name: GIT_SYNC_BRANCH
+            value: {{ .Values.airflow.dags.git.branch }}
+          - name: GIT_SYNC_ROOT
+            value: /git
+          - name: GIT_SYNC_DEST
+            value: repo
+          - name: GIT_SYNC_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: git
+                key: GIT_SYNC_USERNAME
+          - name: GIT_SYNC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: git
+                key: GIT_SYNC_PASSWORD
+      {{- end }}
+      - name: scheduler
+        image: {{ .Values.airflow.image.repository }}:{{ .Values.airflow.image.tag }}
+        imagePullPolicy: {{ .Values.airflow.image.pull_policy }}
+        args: ["scheduler"]
+        envFrom:
+        - secretRef:
+            name: {{ template "airflow.fullname" . }}-env
+        env:
+        - name: AIRFLOW_KUBE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: airflow-config
+          mountPath: /usr/local/airflow/airflow.cfg
+          subPath: airflow.cfg
+        - name: airflow-dags
+          mountPath: /usr/local/airflow/dags
+        - name: airflow-logs
+          mountPath: /usr/local/airflow/logs
+      volumes:
+      - name: airflow-logs
+        persistentVolumeClaim:
+          claimName: {{ if .Values.airflow.logs.persistence.existingClaim }}{{ .Values.airflow.logs.persistence.existingClaim }}{{- else }}{{ template "airflow.fullname" . }}-logs{{- end }}
+      - name: airflow-config
+        configMap:
+          name: {{ template "airflow.fullname" . }}-config
+      - name: {{ template "airflow.fullname" . }}-dags
+        {{- if .Values.airflow.dags.persistence.enabled }}
+        persistentVolumeClaim:
+          {{- if .Values.airflow.dags.persistence.existingClaim }}
+          claimName: "{{ .Values.airflow.dags.persistence.existingClaim }}"
+          {{- else }}
+          claimName: {{ template "airflow.fullname" . }}-dags
+          {{- end }}
+          readOnly: true
+        {{- else }}
+        emptyDir: {}
+        {{- end }}

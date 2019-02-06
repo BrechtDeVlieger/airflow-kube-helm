@@ -1,0 +1,261 @@
+# Duplicate this file and put your customization here
+
+# Requirements:
+# Airflow with KubernetesExecutor
+
+##
+## common settings and setting for the webserver
+airflow:
+  ##
+  ## You will need to define your fernet key:
+  ## Generate fernet_key with:
+  ##    python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
+  ## fernet_key: ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD
+  fernet_key: "abcdefghijklmnopqrstuvwxyzABCDEFG1234567890="
+  service:
+    type: NodePort
+  ##
+  ## base image for webserver/scheduler/workers
+  ## Note: If you want to use airflow HEAD (2.0dev), use the following image:
+  # image
+  #   repository: stibbons31/docker-airflow-dev
+  #   tag: 2.0dev
+  ## Airflow 2.0 allows changing the value ingress.web.path and ingress.flower.path (see bellow).
+  ## In version < 2.0, changing these paths won't have any effect.
+  image:
+    ##
+    ## docker-airflow image
+    repository: airflow
+    ##
+    ## image tag
+    tag: latest
+    ##
+    ## Image pull policy
+    ## values: Always or IfNotPresent
+    pull_policy: IfNotPresent
+  ##
+  ## Custom airflow configuration environment variables
+  ## Use this to override any airflow setting settings defining environment variables in the
+  ## following form: AIRFLOW__<section>__<key>.
+  ## See the Airflow documentation: http://airflow.readthedocs.io/en/latest/configuration.html?highlight=__CORE__#setting-configuration-options)
+  ## Example:
+  ##   config:
+  ##     AIRFLOW__CORE__EXPOSE_CONFIG: "True"
+  ##     HTTP_PROXY: "http://proxy.mycompany.com:123"
+  config:
+
+  logs:
+    persistence:
+      accessMode: ReadWriteOnce
+      ##
+      ## Persistent Volume Storage Class
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      # storageClass: default
+      ##
+      ## Existing claim to use
+      existingClaim:
+      existingClaimSubPath:
+      ##
+      ## Persistant storage size request
+      size: 1Gi
+
+  ##
+  ## Configure DAGs deployment and update
+  dags:
+    ##
+    ## Storage configuration for DAGs
+    persistence:
+      ##
+      ## enable persistance storage
+      enabled: false
+      ##
+      ## Volume access mode
+      accessMode: ReadWriteOnce
+      ##
+      ## Persistent Volume Storage Class
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      # storageClass: default
+      ##
+      ## Existing claim to use
+      existingClaim:
+      existingClaimSubPath:
+      ##
+      ## Persistant storage size request
+      size: 1Gi
+      #
+      # The init-dags.sh is run in an init container before the scheduler and
+      # webserver are started. Here you can add logic to initialize the dags
+      # volume. Use a multiline string with bash commands.
+      init_dags:
+    ##
+    ## Configure Git repository to fetch DAGs
+    git:
+      url: https://github.com/apache/airflow
+      branch: master
+      subpath: dags
+      ##
+      ## Number of seconds to wait between git synchronizations
+      wait: 60
+
+  rbac:
+    enabled: false
+    # Initial rbac users can be defined here as a list of maps.
+    users:
+    - firstname: "Jon"
+      lastname: "Doe"
+      email: "jdoe@example.com"
+      username: "jdoe"
+      role: "Admin"
+      password: "JDoe123"
+    webserver_config: |
+      # -*- coding: utf-8 -*-
+      #
+      # Licensed to the Apache Software Foundation (ASF) under one
+      # or more contributor license agreements.  See the NOTICE file
+      # distributed with this work for additional information
+      # regarding copyright ownership.  The ASF licenses this file
+      # to you under the Apache License, Version 2.0 (the
+      # "License"); you may not use this file except in compliance
+      # with the License.  You may obtain a copy of the License at
+      #
+      #   http://www.apache.org/licenses/LICENSE-2.0
+      #
+      # Unless required by applicable law or agreed to in writing,
+      # software distributed under the License is distributed on an
+      # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+      # KIND, either express or implied.  See the License for the
+      # specific language governing permissions and limitations
+      # under the License.
+
+      import os
+      from airflow import configuration as conf
+      from flask_appbuilder.security.manager import AUTH_DB
+      # from flask_appbuilder.security.manager import AUTH_LDAP
+      from flask_appbuilder.security.manager import AUTH_OAUTH
+      # from flask_appbuilder.security.manager import AUTH_OID
+      # from flask_appbuilder.security.manager import AUTH_REMOTE_USER
+      basedir = os.path.abspath(os.path.dirname(__file__))
+
+      # The SQLAlchemy connection string.
+      SQLALCHEMY_DATABASE_URI = conf.get('core', 'SQL_ALCHEMY_CONN')
+
+      # Flask-WTF flag for CSRF
+      CSRF_ENABLED = True
+
+      # ----------------------------------------------------
+      # AUTHENTICATION CONFIG
+      # ----------------------------------------------------
+      # For details on how to set up each of the following authentication, see
+      # http://flask-appbuilder.readthedocs.io/en/latest/security.html# authentication-methods
+      # for details.
+
+      # The authentication type
+      # AUTH_OID : Is for OpenID
+      # AUTH_DB : Is for database
+      # AUTH_LDAP : Is for LDAP
+      # AUTH_REMOTE_USER : Is for using REMOTE_USER from web server
+      # AUTH_OAUTH : Is for OAuth
+      AUTH_TYPE = AUTH_DB
+
+      # Will allow user self registration
+      AUTH_USER_REGISTRATION = True
+
+      # The default user self registration role
+      AUTH_USER_REGISTRATION_ROLE = "User"
+
+      # When using OAuth Auth, uncomment to setup provider(s) info
+      # Google OAuth example:
+      # OAUTH_PROVIDERS = [{
+      #   'name':'google',
+      #   'whitelist': [],  # optional
+      #   'token_key': 'access_token',
+      #   'icon': 'fa-google',
+      #   'remote_app': {
+      #     'base_url': 'https://www.googleapis.com/oauth2/v2/',
+      #     'request_token_params': {
+      #       'scope': 'email profile'
+      #     },
+      #     'access_token_url': '',
+      #     'authorize_url': '',
+      #     'request_token_url': '',
+      #     'consumer_key': '',
+      #     'consumer_secret': '',
+      #   }
+      # }]
+
+
+##
+## Ingress configuration
+ingress:
+  ##
+  ## enable ingress
+  ## Note: If you want to change url prefix for web ui or flower even if you do not use ingress,
+  ## you can still change ingress.web.path and ingress.flower.path
+  enabled: false
+  ##
+  ## Configure the webserver endpoint
+  web:
+    ## NOTE: This requires an airflow version > 1.9.x
+    ## For the moment (March 2018) this is **not** available on official package, you will have
+    ## to use an image where airflow has been updated to its current HEAD.
+    ## You can use the following one:
+    ##  stibbons31/docker-airflow-dev:2.0dev
+    ##
+    ## if path is '/airflow':
+    ##  - UI will be accessible at 'http://mycompany.com/airflow/admin'
+    ##  - Healthcheck is at 'http://mycompany.com/airflow/health'
+    ##  - api is at 'http://mycompany.com/airflow/api'
+    ## NOTE: do NOT keep trailing slash. For root configuration, set and empty string
+    path: ""
+    ##
+    ## hostname for the webserver
+    host: "localhost"
+    ##
+    ## Annotations for the webserver
+    ## Airflow webserver handles relative path completely, just let your load balancer give the HTTP
+    ## header like the requested URL (no special configuration neeed)
+    annotations:
+
+##
+## Configuration values for the postgresql dependency.
+## ref: https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
+postgresql:
+  ##
+  ## Use the PostgreSQL chart dependency.
+  ## Set to false if bringing your own PostgreSQL.
+  enabled: true
+  ##
+  ## If bringing your own PostgreSQL, the full uri to use
+  ## e.g. postgres://airflow:changeme@my-postgres.com:5432/airflow?sslmode=disable
+  # uri:
+  ##
+  ### PostgreSQL User to create.
+  postgresUser: postgres
+  ##
+  ## PostgreSQL Password for the new user.
+  ## If not set, a random 10 characters password will be used.
+  postgresPassword: airflow
+  ##
+  ## PostgreSQL Database to create.
+  postgresDatabase: airflow
+  ##
+  ## Persistent Volume Storage configuration.
+  ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes
+  persistence:
+    ##
+    ## Enable PostgreSQL persistence using Persistent Volume Claims.
+    enabled: true
+    ##
+    ## Persistant class
+    # storageClass: classname
+    ##
+    ## Access mode:
+    accessMode: ReadWriteOnce
