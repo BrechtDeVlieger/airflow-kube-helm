@@ -36,12 +36,12 @@ RUN set -ex \
         libsasl2-dev \
         libssl-dev \
         libffi-dev \
-        libpq-dev \
     ' \
     && apt-get update -yqq \
     && apt-get upgrade -yqq \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
+        libpq-dev \
         freetds-bin \
         build-essential \
         default-libmysqlclient-dev \
