@@ -8,6 +8,8 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
+  nodeSelector:
+    airflow: true
   replicas: 1
   strategy:
     # Smooth rolling update of the Web UI

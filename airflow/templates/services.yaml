@@ -8,6 +8,8 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
+  nodeSelector:
+    airflow: true
   type: {{ .Values.airflow.service.type }}
   selector:
     app: {{ template "airflow.name" . }}-web

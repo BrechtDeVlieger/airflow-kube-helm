@@ -122,7 +122,7 @@ data:
     worker_container_tag = {{ .Values.airflow.image.tag }}
     worker_container_image_pull_policy = {{ .Values.airflow.image.pull_policy }}
     worker_dags_folder = /usr/local/airflow/dags
-    delete_worker_pods = true
+    delete_worker_pods = True
     {{- if .Values.airflow.dags.persistence.enabled }}
     {{- if .Values.airflow.dags.persistence.existingClaim }}
     dags_volume_claim = {{ .Values.airflow.dags.persistence.existingClaim }}

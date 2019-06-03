@@ -11,7 +11,7 @@ airflow:
   ## Generate fernet_key with:
   ##    python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
   ## fernet_key: ABCDABCDABCDABCDABCDABCDABCDABCDABCDABCD
-  fernet_key: "abcdefghijklmnopqrstuvwxyzABCDEFG1234567890="
+  fernet_key: "wEyDkTXKeSZNfNMhwrPMjSPY-E4UJEx8GtN5QV3nTkM="
   service:
     type: NodePort
   ##
@@ -98,9 +98,9 @@ airflow:
     ##
     ## Configure Git repository to fetch DAGs
     git:
-      url: https://github.com/apache/airflow
+      url: https://github.com/dafrenchyman/kube
       branch: master
-      subpath: dags
+      subpath: .
       ##
       ## Number of seconds to wait between git synchronizations
       wait: 60
@@ -109,12 +109,12 @@ airflow:
     enabled: false
     # Initial rbac users can be defined here as a list of maps.
     users:
-    - firstname: "Jon"
-      lastname: "Doe"
-      email: "jdoe@example.com"
-      username: "jdoe"
+    - firstname: "AI"
+      lastname: "Tiger"
+      email: "ai.of.the.tiger@appfolio.com"
+      username: "admin"
       role: "Admin"
-      password: "JDoe123"
+      password: "airflow123"
     webserver_config: |
       # -*- coding: utf-8 -*-
       #

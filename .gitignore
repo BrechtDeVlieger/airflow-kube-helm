@@ -2,3 +2,10 @@
 *crunch*
 *_complete.yaml
 airflow/charts
+airflow_vars.env
+secrets.env
+secrets.json
+secrets_old.json
+google_app_creds.json
+invoice-processing-ocr-creds.json
+ocr-compress.json

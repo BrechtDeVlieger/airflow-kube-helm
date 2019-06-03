@@ -8,6 +8,8 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
+  nodeSelector:
+    airflow: true
   replicas: 1
   serviceAccountName: {{ template "airflow.fullname" . }}-cluster-access
   strategy:

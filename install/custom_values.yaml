@@ -1,0 +1,52 @@
+airflow:
+  # Don't use this fernet key in production!
+  fernet_key: "wEyDkTXKeSZNfNMhwrPMjSPY-E4UJEx8GtN5QV3nTkM="
+  image:
+    repository: dafrenchyman/docker-airflow
+    tag: 1.10.2
+    pull_policy: Always
+  config:
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "True"
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: "300"
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Los_Angeles"
+    AIRFLOW__CORE__SQL_ALCHEMY_POOL_SIZE: "0"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+    AIRFLOW__WEBSERVER__DAG_DEFAULT_VIEW: "graph"
+  logs:
+    persistence:
+      existingClaim: nfs-airflow-logs
+  dags:
+    persistence:
+      enabled: false  # Persistence must be disabled when using git-sync
+    git:
+      # Play around with different repositories, branches and subpaths
+      # subpath is the relative directory path in the git repository where
+      # the dags can be found.
+      url: https://github.com/dafrenchyman/kube
+      #url: https://github.com/apache/airflow
+      branch: master
+      # subpath: airflow/example_dags # .
+      subpath: .
+  rbac:
+    enabled: false
+    # Initial rbac users can be defined here as a list of maps.
+    users:
+    - firstname: "AI"
+      lastname: "Tiger"
+      email: "ai.of.the.tiger@appfolio.com"
+      username: "admin"
+      role: "Admin"
+      password: "airflow123"
+
+
+ingress:
+  enabled: false
+
+postgresql:
+  enabled: true
+  postgresUser: postgres
+  postgresPassword: airflow123
+  postgresDatabase: airflow
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce

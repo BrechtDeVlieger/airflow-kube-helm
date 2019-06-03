@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+NAMESPACE=$1
+: "${NAMESPACE:="default"}"
+
 set -e
 
-NAMESPACE=airflow
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 WAIT_SECONDS=3
 
