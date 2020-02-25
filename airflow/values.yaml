@@ -101,6 +101,8 @@ airflow:
       url: https://github.com/apache/airflow
       branch: master
       subpath: dags
+      username: gracejansen227
+      password: graciej227!
       ##
       ## Number of seconds to wait between git synchronizations
       wait: 60
