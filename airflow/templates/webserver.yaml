@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "airflow.fullname" . }}-web
@@ -28,6 +28,7 @@ spec:
         app: {{ template "airflow.name" . }}-web
         release: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ template "airflow.fullname" . }}-cluster-access
       securityContext:
         fsGroup: 1000
       restartPolicy: Always

@@ -21,7 +21,7 @@ Confirm that minikube is started by opening the dashboard.
 minikube dashboard
 ```
 
-Don't forget to install tiller on the cluster.
+Don't forget to install tiller on the cluster. Ignore this step
 
 ```bash
 kubectl apply -f airflow/tiller.yaml
@@ -51,7 +51,7 @@ helm upgrade --install airflow airflow/ --namespace airflow --values examples/mi
 ```
 
 When everything is set up correctly, you should be able to access the airflow webserver.
-Have a look at the node port to see on which port the webserver is exposed:
+Have a look at the node port to see on which port the webserver is exposed: don't neeed to do this!
 
 ```bash
 echo 192.168.99.100:`kubectl describe service airflow-web --namespace=airflow | grep NodePort | sed -n 's/.*web  \([0-9]\+\)\/TCP/\1/p' `
