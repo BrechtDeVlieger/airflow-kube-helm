@@ -16,6 +16,8 @@ airflow:
       url: https://github.com/apache/airflow
       branch: master
       subpath: airflow/example_dags
+      username: gracejansen227
+      password: graciej227!
   rbac:
     enabled: false
 
