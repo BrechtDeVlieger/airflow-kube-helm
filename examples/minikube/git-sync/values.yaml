@@ -27,9 +27,9 @@ ingress:
 
 postgresql:
   enabled: true
-  postgresUser: postgres
-  postgresPassword: airflow
-  postgresDatabase: airflow
+  postgresqlUser: postgres
+  postgresqlPassword: airflow
+  postgresqlDatabase: airflow
   persistence:
     enabled: true
     accessMode: ReadWriteOnce
