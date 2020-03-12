@@ -94,3 +94,6 @@ spec:
         {{- else }}
         emptyDir: {}
         {{- end }}
+      {{- if .Values.airflow.image.pull_secrets }}
+      imagePullSecrets: {{ .Values.airflow.image.pull_secrets }}
+      {{- end }}
