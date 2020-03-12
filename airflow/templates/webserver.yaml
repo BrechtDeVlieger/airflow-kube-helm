@@ -28,6 +28,10 @@ spec:
         app: {{ template "airflow.name" . }}-web
         release: {{ .Release.Name }}
     spec:
+      {{- if .Values.airflow.image.pull_secrets }}
+      imagePullSecrets:
+        - name: {{ .Values.airflow.image.pull_secrets }}
+      {{- end }}
       securityContext:
         fsGroup: 1000
       restartPolicy: Always
