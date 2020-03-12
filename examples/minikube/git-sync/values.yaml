@@ -16,6 +16,7 @@ airflow:
       url: https://github.com/apache/airflow
       branch: master
       subpath: airflow/example_dags
+      rev: 1.10.2
   rbac:
     enabled: false
 

@@ -106,6 +106,13 @@ spec:
                 name: git
                 key: GIT_SYNC_PASSWORD
           {{- end }}
+          {{ if .Values.airflow.dags.git.rev }}
+          - name: GIT_SYNC_REV
+            valueFrom:
+              secretKeyRef:
+                name: git
+                key: GIT_SYNC_REV
+          {{- end }}
       {{- end }}
       - name: nginx
         image: nginx
