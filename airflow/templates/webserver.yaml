@@ -92,16 +92,20 @@ spec:
             value: repo
           - name: GIT_SYNC_WAIT
             value: "{{ .Values.airflow.dags.git.wait }}"
+          {{ if .Values.airflow.dags.git.username }}
           - name: GIT_SYNC_USERNAME
             valueFrom:
               secretKeyRef:
                 name: git
                 key: GIT_SYNC_USERNAME
+          {{- end }}
+          {{ if .Values.airflow.dags.git.username }}
           - name: GIT_SYNC_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: git
                 key: GIT_SYNC_PASSWORD
+          {{- end }}
       {{- end }}
       - name: nginx
         image: nginx

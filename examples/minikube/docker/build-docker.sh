@@ -12,11 +12,15 @@ fi
 rm -rf .tmp/
 
 mkdir -p .tmp && cd .tmp
-git clone https://github.com/puckel/docker-airflow.git
+mkdir docker-airflow
+mkdir docker-airflow/script
+mkdir docker-airflow/config
+cp $DIR/../../../script/entrypoint.sh docker-airflow/script/entrypoint.sh
+cp $DIR/../../../config/airflow.cfg docker-airflow/config/airflow.cfg
 cp $DIR/Dockerfile docker-airflow/Dockerfile
 cd docker-airflow
 
-docker build --build-arg PYTHON_DEPS="Flask-OAuthlib psycopg2 psycopg2-binary" --build-arg AIRFLOW_DEPS="kubernetes" --tag=${IMAGE}:${TAG} .
+docker build --build-arg PYTHON_DEPS="Flask-OAuthlib" --build-arg AIRFLOW_DEPS="kubernetes" --tag=${IMAGE}:${TAG} .
 
 cd ../..
 rm -rf .tmp/

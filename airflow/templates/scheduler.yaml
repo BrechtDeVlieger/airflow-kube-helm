@@ -49,16 +49,20 @@ spec:
             value: /git
           - name: GIT_SYNC_DEST
             value: repo
+          {{ if .Values.airflow.dags.git.username }}
           - name: GIT_SYNC_USERNAME
             valueFrom:
               secretKeyRef:
                 name: git
                 key: GIT_SYNC_USERNAME
+          {{- end }}
+          {{ if .Values.airflow.dags.git.username }}
           - name: GIT_SYNC_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: git
                 key: GIT_SYNC_PASSWORD
+          {{- end }}
       {{- end }}
       - name: scheduler
         image: {{ .Values.airflow.image.repository }}:{{ .Values.airflow.image.tag }}
