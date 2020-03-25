@@ -13,10 +13,9 @@ airflow:
       # Play around with different repositories, branches and subpaths
       # subpath is the relative directory path in the git repository where
       # the dags can be found.
-      url: https://github.com/apache/airflow
+      url: https://github.com/krulletc/airflow-dag-etl-demo
       branch: master
-      subpath: airflow/example_dags
-      rev: 1.10.2
+      subpath: airflow_files/dags
   rbac:
     enabled: false
 
