@@ -28,7 +28,7 @@ airflow:
     repository: airflow
     ##
     ## image tag
-    tag: latest
+    tag: b
     ##
     ## Image pull policy
     ## values: Always or IfNotPresent
@@ -98,7 +98,7 @@ airflow:
     ##
     ## Configure Git repository to fetch DAGs
     git:
-      url: https://github.com/apache/airflow
+      url: https://github.com/itayB/airflow-dag.git #https://github.com/apache/airflow
       branch: master
       subpath: dags
       ##
@@ -239,13 +239,16 @@ postgresql:
   ##
   ### PostgreSQL User to create.
   postgresUser: postgres
+  postgresqlUser: postgres
   ##
   ## PostgreSQL Password for the new user.
   ## If not set, a random 10 characters password will be used.
   postgresPassword: airflow
+  postgresqlPassword: airflow
   ##
   ## PostgreSQL Database to create.
   postgresDatabase: airflow
+  postgresqlDatabase: airflow
   ##
   ## Persistent Volume Storage configuration.
   ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes

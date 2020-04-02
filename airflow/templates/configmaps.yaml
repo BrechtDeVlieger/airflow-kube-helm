@@ -115,6 +115,7 @@ data:
 
     [webserver]
     rbac = {{ .Values.airflow.rbac.enabled }}
+    expose_config = true
 
     [kubernetes]
     airflow_configmap = {{ template "airflow.fullname" . }}-config
@@ -147,6 +148,7 @@ data:
 
     in_cluster = true
     namespace = {{ .Release.Namespace }}
+    worker_service_account_name = airflow-cluster-access
 
     # for cloning dags from git repositories into volumes: https://github.com/kubernetes/git-sync
     git_sync_container_repository = k8s.gcr.io/git-sync
