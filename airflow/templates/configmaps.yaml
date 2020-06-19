@@ -121,6 +121,8 @@ data:
     worker_container_repository = {{ .Values.airflow.image.repository }}
     worker_container_tag = {{ .Values.airflow.image.tag }}
     worker_container_image_pull_policy = {{ .Values.airflow.image.pull_policy }}
+    image_pull_secrets = {{ .Values.airflow.image.pull_secrets }}
+    worker_service_account_name = {{ template "airflow.fullname" . }}-cluster-access
     worker_dags_folder = /usr/local/airflow/dags
     delete_worker_pods = true
     {{- if .Values.airflow.dags.persistence.enabled }}
